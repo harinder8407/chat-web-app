@@ -1,0 +1,94 @@
+{% extends 'chat/base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Room</title>
+    {% load static %}
+    
+</head>
+<body>
+    <div class="row" style="padding-top:10px;" >
+        <div class="col"><hr></div>
+        <div class="col-auto"><p class="h3" align="center">Start Chatting</p></div>
+        <div class="col"><hr></div>
+    </div>
+    
+    <div >
+        <div id="ch" class="overflow-auto msgs" style="overflow-y: scroll; height:500px;"></div>
+            <div class="input-group mb-3">
+                  <input id="chat-message-input" type="text" class="form-control" placeholder="Message" aria-label="Message" >
+                  <div class="input-group-append">
+                    <button id = "chat-message-submit" class="btn btn-success" type="submit" id="sendBtn">Send</button>
+                  </div>
+            </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reconnecting-websocket/1.0.0/reconnecting-websocket.js"></script>
+    {{ room_name|json_script:"room-name" }}
+    {{ user_name|json_script:"user-name" }}
+    
+    <script>
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        const userName = JSON.parse(document.getElementById('user-name').textContent);
+        console.log(userName)
+        const chatSocket = new ReconnectingWebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/'
+            + roomName
+            + '/'
+        );
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            var content =
+            '<div class="container">' +
+                '<b style="color:#000" class="right">' +
+                '<tr> <td>' + data.username 
+                + '</td> </tr>'+
+                '</b> <p class="right">' +
+                data.message +
+                '</p>' 
+                '</div>';
+            if (data.username === userName ) {
+                content =
+                '<div class="container darker">' +
+                    '<b style="color:#000" class="left">' +
+                    data.username +
+                    "</b><p>" +
+                    data.message +
+                    '</p>'+
+                    '</div>';
+                }
+
+            var messageDiv = document.getElementById("ch");
+            messageDiv.innerHTML += content;
+
+        //document.querySelector('#chat-log').value += (data.message + '\n');
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        }; 
+
+        document.querySelector('#chat-message-submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#chat-message-input');
+            const message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'username':userName
+            }));
+            messageInputDom.value = '';
+        };
+    </script>
+</body>
+</html>
+{% endblock %}
